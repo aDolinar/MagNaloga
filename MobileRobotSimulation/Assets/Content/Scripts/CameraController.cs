@@ -12,13 +12,26 @@ public class CameraController : MonoBehaviour
     float[] cameraRot;
     bool verticalEnabled;
     bool verticalMode;
+    bool farMode;
     public KeyCode[] keys;
     public Transform cam;
     Quaternion rot90;
     Quaternion rotm90;
+    Camera cam2;
+    const float fov1 = 18;
+    const float fov2 = 60;
+    float targetFov;
+
+
     void Start()
     {
+        GameObject startRobot = GameObject.FindGameObjectWithTag("Start");
+        if (startRobot!=null)
+        {
+            target.position = startRobot.transform.position;
+        }
         verticalMode = false;
+        farMode = false;
         verticalEnabled = true;
         transform.position = target.position;
         transform.rotation = target.rotation;
@@ -30,6 +43,9 @@ public class CameraController : MonoBehaviour
         cameraPos[1] = new Vector3(0f, cameraPos[0].magnitude, 0f);
         cameraRot[0] = cam.localEulerAngles.x;
         cameraRot[1] = 90f;
+        cam2=cam.GetComponent<Camera>();
+        cam2.fieldOfView = fov1;
+        targetFov = fov1;
     }
     private void Update()
     {
@@ -77,6 +93,18 @@ public class CameraController : MonoBehaviour
             if (verticalEnabled)
                 StartCoroutine(ToggleVertical());
         }
+        if (Input.GetKeyDown(keys[7]))
+        {
+            farMode = !farMode;
+            if (farMode)
+            {
+                targetFov = fov2;
+            }
+            else
+            {
+                targetFov = fov1;
+            }
+        }
     }
     IEnumerator ToggleVertical()
     {
@@ -117,7 +145,7 @@ public class CameraController : MonoBehaviour
 
         transform.position = Vector3.Lerp(transform.position, target.position, interpolationT);
         transform.rotation = Quaternion.Slerp(transform.rotation, target.rotation, interpolationT);
-        
+        cam2.fieldOfView = Mathf.Lerp(cam2.fieldOfView, targetFov, interpolationT);
     }
     public void AssignNewMobileTarget(Transform newTarget)
     {

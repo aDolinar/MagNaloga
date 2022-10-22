@@ -58,12 +58,18 @@
   <ItemGroup>
     <Compile Include="Assets\Content\Scripts\RobotHandle.cs" />
     <Compile Include="Assets\Content\Scripts\CameraController.cs" />
+    <Compile Include="Assets\Content\Scripts\UDPComms.cs" />
     <Compile Include="Assets\Content\Scripts\DoorController.cs" />
     <Compile Include="Assets\Content\Scripts\BuildingManager.cs" />
     <Compile Include="Assets\Content\Scripts\Regulator.cs" />
-    <Compile Include="Assets\Content\Scripts\GameUDPServer.cs" />
+    <Compile Include="Assets\Content\Scripts\SaveManager.cs" />
     <Compile Include="Assets\Content\Scripts\BuildingBlueprint.cs" />
     <Compile Include="Assets\Content\Scripts\Telemetry.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Assets\Saves\example1.txt" />
+    <None Include="Assets\Saves\blankTemplate.txt" />
+    <None Include="Assets\Saves\example2.txt" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="UnityEngine">

@@ -1,16 +1,17 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-
 public class BuildingManager : MonoBehaviour
 {
     public static BuildingManager instance;
+    public RobotHandle RH;
     public Transform BuildingParent;
     bool buildMode;
     [Header("KeyCodes")]
     public KeyCode toggleBuildMode;
     public KeyCode rotateBuilding;
     public KeyCode snapMode;
+    public KeyCode escapeKey;
     [Header("Prefabs")]
     public BuildingBlueprint[] blueprints;
     int selectedBlueprint;
@@ -30,6 +31,7 @@ public class BuildingManager : MonoBehaviour
     Ray ray;
     RaycastHit hit;
     Vector3 posVect;
+    char[] loadChars;
     void Start()
     {
         instance = this;
@@ -37,7 +39,7 @@ public class BuildingManager : MonoBehaviour
         selectedBlueprint = 0;
         cam = Camera.main;
         floorMask = LayerMask.GetMask("Floor");
-        buildingMask = LayerMask.GetMask("Buildings","Markers","LineFollow");
+        buildingMask = LayerMask.GetMask("Buildings", "Markers", "LineFollow","Visuals");
         robotMask = LayerMask.GetMask("Robot");
         rot = 0;
         snapSize = 1f;
@@ -46,10 +48,15 @@ public class BuildingManager : MonoBehaviour
             blueprints[i].ID = i;
         }
         camCtrl = cam.transform.parent.gameObject.GetComponent<CameraController>();
+        loadChars = "ixyzre".ToCharArray();
     }
 
     void Update()
     {
+        if(Input.GetKeyDown(escapeKey))
+        {
+            Application.Quit();
+        }
         if (Input.GetKeyDown(toggleBuildMode))
         {
             SetBuildMode(!buildMode);
@@ -78,7 +85,7 @@ public class BuildingManager : MonoBehaviour
             }
             if (Input.GetKeyDown(KeyCode.Mouse1))
             {
-                if (ghostObj!=null)
+                if (ghostObj != null)
                 {
                     ghostObj.transform.localScale = Vector3.one * 0.001f;
                 }
@@ -98,7 +105,7 @@ public class BuildingManager : MonoBehaviour
             if (Input.GetKeyDown(KeyCode.Mouse0))
             {
                 ray = cam.ScreenPointToRay(Input.mousePosition);
-                if (Physics.Raycast(ray,out hit, 200f, robotMask))
+                if (Physics.Raycast(ray, out hit, 200f, robotMask))
                 {
                     camCtrl.AssignNewMobileTarget(hit.transform);
                 }
@@ -111,12 +118,15 @@ public class BuildingManager : MonoBehaviour
         if (Physics.Raycast(ray, out hit, 500f, buildingMask))
         {
             GameObject clickedGameObject = hit.collider.gameObject;
-            if (clickedGameObject.transform.parent!=null)
+            if (clickedGameObject.transform.parent != null)
             {
-                clickedGameObject = clickedGameObject.transform.parent.gameObject;
+                if (!clickedGameObject.transform.parent.CompareTag("Control"))
+                {
+                    clickedGameObject = clickedGameObject.transform.parent.gameObject;
+                }
             }
             //first click
-            if (demolishObj==null)
+            if (demolishObj == null)
             {
                 demolishObj = clickedGameObject;
                 MeshRenderer MR = demolishObj.GetComponent<MeshRenderer>();
@@ -174,13 +184,61 @@ public class BuildingManager : MonoBehaviour
             ghostObj.transform.position = newPos;
         }
     }
+    public void BuildFromLoad(string data)
+    {
+        int[] indices = new int[loadChars.Length];
+        for (int i = 0; i < loadChars.Length; i++)
+        {
+            indices[i] = data.IndexOf(loadChars[i]);
+        }
+        int ID = int.Parse(data.Substring(indices[0] + 1, indices[1] - indices[0] - 1));
+        float x = float.Parse(data.Substring(indices[1] + 1, indices[2] - indices[1] - 1));
+        float y = float.Parse(data.Substring(indices[2] + 1, indices[3] - indices[2] - 1));
+        float z = float.Parse(data.Substring(indices[3] + 1, indices[4] - indices[3] - 1));
+        float r = float.Parse(data.Substring(indices[4] + 1, indices[5] - indices[4] - 1));
+        GameObject newObj = Instantiate(blueprints[ID].prefab, new Vector3(x, y, z), Quaternion.Euler(0f, r, 0f));
+        newObj.transform.parent = BuildingParent;
+        if (newObj.CompareTag("Start"))
+        {
+            RH.MoveRobotOnLoad(newObj.transform.position, newObj.transform.rotation);
+        }
+        if (newObj.CompareTag("Gate"))
+        {
+            DoorController DC = newObj.GetComponent<DoorController>();
+            if (DC!=null)
+            {
+                DC.StartProximityChecks();
+            }
+        }
+    }
     void Build()
     {
         if (ghostObj != null)
         {
-
-            GameObject newObj=Instantiate(blueprints[selectedBlueprint].prefab, ghostObj.transform.position, ghostObj.transform.rotation);
+            bool isStart = blueprints[selectedBlueprint].prefab.name.Equals("RobotStartSpot");
+            if (isStart)
+            {
+                GameObject[] tmpStarts = GameObject.FindGameObjectsWithTag("Start");
+                for (int i = 0; i < tmpStarts.Length; i++)
+                {
+                    tmpStarts[i].tag = "BeingDestroyed";
+                    Destroy(tmpStarts[i]);
+                }
+            }
+            GameObject newObj = Instantiate(blueprints[selectedBlueprint].prefab, ghostObj.transform.position, ghostObj.transform.rotation);
             newObj.transform.parent = BuildingParent;
+            if (isStart)
+            {
+                RH.OnMatlabReset();
+            }
+            if (newObj.CompareTag("Gate"))
+            {
+                DoorController DC = newObj.GetComponent<DoorController>();
+                if (DC != null)
+                {
+                    DC.StartProximityChecks();
+                }
+            }
         }
     }
     void Rotate()
@@ -205,6 +263,12 @@ public class BuildingManager : MonoBehaviour
             ghostObj = null;
         }
         ghostObj = Instantiate(blueprints[selectedBlueprint].prefab, GetPosFromMousePos() + blueprints[selectedBlueprint].offset, GetBuildRot());
+        Rigidbody rbGhost = ghostObj.GetComponent<Rigidbody>();
+        if (rbGhost!=null)
+        {
+            rbGhost.isKinematic = true;
+        }
+        ghostObj.tag = "Ghost";
         MeshRenderer MR = ghostObj.GetComponent<MeshRenderer>();
         Material[] mats = MR.materials;
         for (int i = 0; i < mats.Length; i++)
@@ -237,7 +301,7 @@ public class BuildingManager : MonoBehaviour
         if (snapSize > 100f)
             snapSize = 1f;
     }
-    void SetBuildMode(bool newState)
+    public void SetBuildMode(bool newState)
     {
         buildMode = newState;
         if (newState)
@@ -251,7 +315,7 @@ public class BuildingManager : MonoBehaviour
         {
             Destroy(ghostObj);
             ghostObj = null;
-            if (demolishObj!=null)
+            if (demolishObj != null)
             {
                 MeshRenderer MR = demolishObj.GetComponent<MeshRenderer>();
                 Material[] mats = MR.materials;
@@ -290,7 +354,7 @@ public class BuildingManager : MonoBehaviour
     Vector3 GetPosFromMousePos()
     {
         ray = cam.ScreenPointToRay(Input.mousePosition);
-        Physics.Raycast(ray, out hit, 200f,floorMask);
+        Physics.Raycast(ray, out hit, 200f, floorMask);
         posVect = hit.point * snapSize;
         posVect = new Vector3(Mathf.Round(posVect.x), Mathf.Round(posVect.y), Mathf.Round(posVect.z)) / snapSize;
         return posVect;

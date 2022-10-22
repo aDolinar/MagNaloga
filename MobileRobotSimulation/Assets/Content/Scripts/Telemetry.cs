@@ -21,6 +21,9 @@ public class Telemetry
     [HideInInspector] public float errorVelocity;
     [HideInInspector] public float errorSteering;
 
+    public int activeCollisions;
+    public int lastMarkerDetected;
+
     public string DebugTelemetry()
     {
         return ("torque: " + realTorque.ToString() + "   steering: " + realSteering.ToString() + "   braking: " + realBraking.ToString() + "   velocity: " + realVelocity.ToString());
@@ -35,5 +38,7 @@ public class Telemetry
         targetSteering = 0f;
         errorVelocity = 0f;
         errorSteering = 0f;
+        activeCollisions = 0;
+        lastMarkerDetected = 0;
     }
 }

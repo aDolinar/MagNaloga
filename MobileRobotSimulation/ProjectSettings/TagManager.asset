@@ -5,6 +5,12 @@ TagManager:
   serializedVersion: 2
   tags:
   - Robot
+  - Start
+  - Ghost
+  - BeingDestroyed
+  - Control
+  - Gate
+  - Marker
   layers:
   - Default
   - TransparentFX
@@ -18,7 +24,7 @@ TagManager:
   - Wheels
   - Markers
   - LineFollow
-  - 
+  - Visuals
   - 
   - 
   - 

@@ -21,9 +21,12 @@ public class DoorController : MonoBehaviour
         gateOpen = true;
         WFFU = new WaitForFixedUpdate();
         animating = false;
-        SetDoorState(false);
+        SetDoorState(true);
         robotTransf = GameObject.FindGameObjectsWithTag("Robot");
         
+    }
+    public void StartProximityChecks()
+    {
         InvokeRepeating("CheckProximity", 1f, 1f);
     }
     void CheckProximity()

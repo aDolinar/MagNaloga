@@ -31,18 +31,22 @@ public class RobotHandle : MonoBehaviour
     Vector3[] lineFollowOrigins;
     bool[] lineFollowValues;
     LayerMask lineFollowMask;
+    //tagReader
+    public Transform tagReader;
+    LayerMask tagMask;
+    const float tagRange=0.75f;
+    Collider[] foundTags;
+
     //udp
-    public GameUDPServer udp;
+    public UDPComms udp;
     float[] dataToSend;
-    const int totalData = 19;
+    const int totalData = 21;
     int k;
     float lineFollowResult;
-    //startVals
-    Vector3 startPos;
-    Quaternion startRot;
     void Start()
     {
         RB = GetComponent<Rigidbody>();
+
         telemetry.realTorque = 0f;
         telemetry.realBraking = 0f;
         telemetry.realSteering = 0f;
@@ -63,15 +67,17 @@ public class RobotHandle : MonoBehaviour
         lineFollowMask = LayerMask.GetMask("LineFollow");
         //init udp
         dataToSend = new float[totalData];
-        //startVals
-        startPos = transform.position;
-        startRot = transform.rotation;
+        OnMatlabReset();
+        //init tagReader
+        tagMask = LayerMask.GetMask("Markers");
+        InvokeRepeating("CheckForTag", 1f, 0.2f);
     }
     // Update is called once per frame
     void FixedUpdate()
     {
-        UpdateTargets(udp.getDataX(1), udp.getDataX(2));
-        if (udp.getDataX(0)>1f)
+        Debug.Log(telemetry.lastMarkerDetected);
+        UpdateTargets(udp.GetDataIdx(1), udp.GetDataIdx(2));
+        if (udp.GetDataIdx(0)>1f)
         {
             OnMatlabReset();
         }
@@ -90,6 +96,14 @@ public class RobotHandle : MonoBehaviour
         SendDataUDP();
         //Debug.Log(telemetry.DebugTelemetry() + "   " + regulator.DebugRegulator());
     }
+    void CheckForTag()
+    {
+        foundTags=Physics.OverlapSphere(tagReader.position, tagRange,tagMask);
+        if (foundTags.Length!=0)
+        {
+            telemetry.lastMarkerDetected = foundTags[0].transform.GetSiblingIndex();
+        }
+    }
 
     void UpdateTargets(float newTargetVelocity, float newTargetSteering)
     {
@@ -107,7 +121,7 @@ public class RobotHandle : MonoBehaviour
     }
     void UpdateTelemetry()
     {
-        telemetry.realVelocity = RB.velocity.magnitude;
+        telemetry.realVelocity = Vector3.Dot(RB.velocity,transform.forward);
         telemetry.realOrientation = transform.rotation.eulerAngles;
         telemetry.realPosition = transform.position;
 
@@ -118,31 +132,15 @@ public class RobotHandle : MonoBehaviour
     void RegulateTelemetryValues()
     {
         regulator.AddIerrors(telemetry.errorVelocity, telemetry.errorSteering);
-        if (telemetry.targetVelocity >= 0f)
+        telemetry.realTorque = regulator.velocityP * telemetry.errorVelocity + regulator.velocityI * regulator.velocityErrorAccumulated;
+        if (Mathf.Approximately(telemetry.targetVelocity,0f))
         {
-            if (telemetry.errorVelocity > 0f)
-            {
-                telemetry.realTorque = regulator.velocityP * telemetry.errorVelocity + regulator.velocityI * regulator.velocityErrorAccumulated;
-                telemetry.realBraking = 0f;
-            }
-            else
-            {
-                telemetry.realTorque = 0f;
-                telemetry.realBraking = Mathf.Abs(regulator.velocityP * telemetry.errorVelocity + regulator.velocityI * regulator.velocityErrorAccumulated);
-            }
+            Debug.Log("BRAKE "+telemetry.targetVelocity);
+            telemetry.realBraking = 20f;
         }
         else
         {
-            if (telemetry.errorVelocity > 0f)
-            {
-                telemetry.realTorque = 0f;
-                telemetry.realBraking = regulator.velocityP * telemetry.errorVelocity + regulator.velocityI * regulator.velocityErrorAccumulated;
-            }
-            else
-            {
-                telemetry.realTorque = -Mathf.Abs(regulator.velocityP * telemetry.errorVelocity + regulator.velocityI * regulator.velocityErrorAccumulated);
-                telemetry.realBraking = 0f;
-            }
+            telemetry.realBraking = 0f;
         }
         telemetry.realSteering += (regulator.steeringP * telemetry.errorSteering + regulator.steeringI * regulator.steeringErrorAccumulated) * Time.fixedDeltaTime;
     }
@@ -250,16 +248,62 @@ public class RobotHandle : MonoBehaviour
             }
         }
         dataToSend[k++] = lineFollowResult;
+        dataToSend[k++] = telemetry.activeCollisions;
+        dataToSend[k++] = telemetry.lastMarkerDetected;
         //send data
-        udp.sendData(dataToSend);
+        udp.SendData(dataToSend);
     }
-    void OnMatlabReset()
+    public void OnMatlabReset()
     {
-        transform.position = startPos;
-        transform.rotation = startRot;
+        GameObject startMarker = GameObject.FindGameObjectWithTag("Start");
         RB.velocity = Vector3.zero;
         RB.angularVelocity = Vector3.zero;
+        transform.position = startMarker.transform.position + Vector3.up * 0.45f;
+        transform.rotation = startMarker.transform.rotation;
         telemetry.Reset();
         regulator.Reset();
+        telemetry.lastMarkerDetected = FindClosestMarker(transform.position);
+    }
+    public void MoveRobotOnLoad(Vector3 pos, Quaternion rot)
+    {
+        RB.velocity = Vector3.zero;
+        RB.angularVelocity = Vector3.zero;
+        transform.position = pos+Vector3.up*0.45f;
+        transform.rotation = rot;
+        telemetry.Reset();
+        regulator.Reset();
+        telemetry.lastMarkerDetected = FindClosestMarker(transform.position);
+    }
+    private void OnCollisionEnter(Collision collision)
+    {
+        telemetry.activeCollisions++;
+    }
+    private void OnCollisionExit(Collision collision)
+    {
+        telemetry.activeCollisions--;
+    }
+    int FindClosestMarker(Vector3 worldPos)
+    {
+        float closest = Mathf.Infinity;
+        int closestID = 0;
+        float tmpDist;
+        GameObject[] allMarkers = GameObject.FindGameObjectsWithTag("Marker");
+        if (allMarkers.Length>0)
+        {
+            for (int i = 0; i < allMarkers.Length; i++)
+            {
+                tmpDist = (worldPos - allMarkers[i].transform.position).magnitude;
+                if (closest > tmpDist)
+                {
+                    closest = tmpDist;
+                    closestID = i;
+                }
+            }
+            return allMarkers[closestID].transform.GetSiblingIndex();
+        }
+        else
+        {
+            return 0;
+        }
     }
 }
