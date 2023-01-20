@@ -49,6 +49,7 @@ public class BuildingManager : MonoBehaviour
         }
         camCtrl = cam.transform.parent.gameObject.GetComponent<CameraController>();
         loadChars = "ixyzre".ToCharArray();
+        Application.targetFrameRate = 100;
     }
 
     void Update()

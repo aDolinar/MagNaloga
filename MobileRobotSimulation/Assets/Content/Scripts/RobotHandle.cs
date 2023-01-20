@@ -75,12 +75,11 @@ public class RobotHandle : MonoBehaviour
     // Update is called once per frame
     void FixedUpdate()
     {
-        Debug.Log(telemetry.lastMarkerDetected);
-        UpdateTargets(udp.GetDataIdx(1), udp.GetDataIdx(2));
         if (udp.GetDataIdx(0)>1f)
         {
             OnMatlabReset();
         }
+        UpdateTargets(udp.GetDataIdx(1), udp.GetDataIdx(2));
         UpdateTelemetry();
         RegulateTelemetryValues();
 
@@ -135,7 +134,7 @@ public class RobotHandle : MonoBehaviour
         telemetry.realTorque = regulator.velocityP * telemetry.errorVelocity + regulator.velocityI * regulator.velocityErrorAccumulated;
         if (Mathf.Approximately(telemetry.targetVelocity,0f))
         {
-            Debug.Log("BRAKE "+telemetry.targetVelocity);
+            //Debug.Log("BRAKE "+telemetry.targetVelocity);
             telemetry.realBraking = 20f;
         }
         else
@@ -204,7 +203,6 @@ public class RobotHandle : MonoBehaviour
             {
                 lineFollowValues[i] = false;
             }
-
         }
     }
     void SendDataUDP()

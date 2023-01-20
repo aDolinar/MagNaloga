@@ -18,20 +18,20 @@ send_data_length=num_floats_to_send*4;
 %load map data
 savesFolder="C:\UnityProjects\MagistrskaNaloga\MagNaloga\MobileRobotSimulationBuilt\MobileRobotSimulation_Data\Saves\";
 saveName="example2.txt";
-[nodes, markers, markerPositions] = loadMapData(saveName,savesFolder);
+[nodes, markers, markerPositions,fig] = loadMapData(saveName,savesFolder);
 
 %start up the model
-launchChoice=5; %launchChoice=1  lineFollowing, launchChoice=2 pathFinding A*,launchChoice=3 moveToPoint, %launchChoice=other udpTemplate
+launchChoice=2; %launchChoice=1  lineFollowing, launchChoice=2 pathFinding A*,launchChoice=3 moveToPoint, %launchChoice=other udpTemplate
 startTag=29;    %configure to change pathfinding start
-endTag=18;      %configure to change pathfinding end
+endTag=12;      %configure to change pathfinding end
 switch launchChoice
     case 1
         system("UDPMain_LineFollow.slx");
     case 2
-
         pathActions=Astar(startTag,endTag,nodes);
         disp("A* path generated");
         system("UDPMain_Pathfinding.slx");
+        addAstarLinesToPlot(pathActions,markerPositions,fig);
     case 3
         system("UDPMain_MoveToPoint.slx");
     case 4
@@ -40,6 +40,8 @@ switch launchChoice
         pathActions=Astar(startTag,endTag,nodes);
         disp("A* path generated");
         system("UDPMain_Pathfinding_withPrimitiveAvoidance.slx")
+    case 6
+        system("UDPMain_MoveToPointPrimitiveAvoidance2.slx")
     otherwise
         system("UDPtemplate.slx");
 end

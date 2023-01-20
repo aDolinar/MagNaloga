@@ -1,4 +1,4 @@
-function [nodes, markers, markerPositions]=loadMapData(saveName,savesFolder)
+function [nodes, markers, markerPositions, fig]=loadMapData(saveName,savesFolder)
 %load file
 fileName=savesFolder+saveName;
 fileID=fopen(fileName);
@@ -66,7 +66,7 @@ radius = 3.5;
 objectColors=['k','k',"#D95319","#D95319",'k','k','k','k','b','r','y','y','y','y','m','m','m','m','g'];
 drawOrder=[4,5,2,1,6,7,8,9,3];
 %plot
-figure
+fig=figure;
 hold on
 for d=drawOrder
     for i=1:totalObjects
@@ -86,7 +86,7 @@ for d=drawOrder
                 center=[currentObject(2)+offsets(1),currentObject(4)+offsets(2)];
                 xCurve=center(1)+radius*cosd(angle);
                 yCurve=center(2)+radius*sind(angle);
-                plot(xCurve,yCurve,Color=objectColors(currentObject(1)),LineWidth=3);
+                plot(xCurve,yCurve,Color=objectColors(currentObject(1)),LineWidth=2);
             else    %regular rectangles
                 if (currentObjectInfo(3)==4||currentObjectInfo(3)==6)
                     edgeColor=objectColors(currentObject(1));
@@ -103,6 +103,9 @@ for i=1:totalMarkers
     currentMarker=mapData(markers(i),:);
     text(currentMarker(2),currentMarker(4),num2str(i,"%02d"),"HorizontalAlignment","center","FontWeight","bold","BackgroundColor",'r','FontSize',9);
 end
+ylabel("z")
+xlabel("x")
+title("Zemljevid")
 hold off
 axis equal
 
