@@ -24,6 +24,7 @@ public class UDPComms : MonoBehaviour
     //threads
     Thread threadSend;
     Thread threadReceive;
+    const int threadSleepTime=20;
     //ip end points
     IPEndPoint IPEPsend;
     IPEndPoint IPEPreceive;
@@ -75,7 +76,7 @@ public class UDPComms : MonoBehaviour
         clientSend = new UdpClient();
         while (simRunning)
         {
-            Thread.Sleep(20);
+            Thread.Sleep(threadSleepTime);
             for (int i = 0; i < totalDataSent; i++)
             {
                 preallocSend = BitConverter.GetBytes(dataToBeSent[i]);
@@ -94,7 +95,6 @@ public class UDPComms : MonoBehaviour
             }
         }
         clientSend.Close();
-
     }
     void InitThreadReceive()
     {

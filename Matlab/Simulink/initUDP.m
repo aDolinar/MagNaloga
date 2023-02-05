@@ -21,9 +21,9 @@ saveName="example2.txt";
 [nodes, markers, markerPositions,fig] = loadMapData(saveName,savesFolder);
 
 %start up the model
-launchChoice=2; %launchChoice=1  lineFollowing, launchChoice=2 pathFinding A*,launchChoice=3 moveToPoint, %launchChoice=other udpTemplate
+launchChoice=2; %walaunchChoice=1  lineFollowing, launchChoice=2 pathFinding A*,launchChoice=3 moveToPoint, %launchChoice=other udpTemplate
 startTag=29;    %configure to change pathfinding start
-endTag=12;      %configure to change pathfinding end
+endTag=11;      %configure to change pathfinding end
 switch launchChoice
     case 1
         system("UDPMain_LineFollow.slx");
